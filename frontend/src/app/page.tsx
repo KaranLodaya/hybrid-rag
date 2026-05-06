@@ -211,20 +211,22 @@ export default function HybridRAGDashboard() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[var(--background)] text-[var(--foreground)]">
+    <div className="flex h-screen overflow-hidden bg-[var(--background)] text-[var(--foreground)] selection:bg-blue-500/30">
+      <div className="noise-bg" />
+      
       {/* Sidebar */}
-      <aside className="w-72 border-r border-white/10 flex flex-col bg-[var(--sidebar-bg)] transition-colors duration-300">
-        <div className="p-6">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl gradient-bg flex items-center justify-center shadow-lg shadow-blue-500/20">
-              <Database className="w-5 h-5 text-white" />
+      <aside className="w-80 border-r border-[var(--border)] flex flex-col sidebar-gradient z-20">
+        <div className="p-8">
+          <div className="flex items-center gap-4 mb-10 group cursor-default">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 flex items-center justify-center shadow-2xl shadow-blue-500/40 group-hover:scale-105 transition-transform duration-500">
+              <Database className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="font-bold text-lg tracking-tight">Hybrid RAG</h1>
-              <div className="flex items-center gap-1.5">
-                <div className={`w-1.5 h-1.5 rounded-full ${apiError ? 'bg-red-500' : 'bg-green-500 animate-pulse'}`} />
-                <span className="text-[10px] font-medium opacity-40 uppercase tracking-widest">
-                  {apiError ? 'Offline' : 'Dual-Engine Active'}
+              <h1 className="font-bold text-xl tracking-tight leading-none mb-1.5">Hybrid RAG</h1>
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${apiError ? 'bg-red-500' : 'bg-emerald-500 animate-pulse'}`} />
+                <span className="text-[11px] font-bold text-[var(--muted)] uppercase tracking-[0.15em]">
+                  {apiError ? 'Offline' : 'Engine Ready'}
                 </span>
               </div>
             </div>
@@ -232,136 +234,137 @@ export default function HybridRAGDashboard() {
 
           <button 
             onClick={handleCreateWorkspace}
-            className="w-full py-3 px-4 rounded-xl gradient-bg text-white font-semibold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-all active:scale-95 shadow-lg shadow-blue-500/20"
+            className="w-full py-3.5 px-4 rounded-2xl bg-[var(--primary)] text-white font-bold text-sm flex items-center justify-center gap-2.5 hover:opacity-90 hover:scale-[0.98] transition-all active:scale-95 shadow-lg shadow-blue-500/25 mb-8"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-5 h-5" />
             New Vault
           </button>
 
-          <div className="mt-4 p-1 bg-black/10 dark:bg-white/5 rounded-xl">
-            <div className="flex gap-1 mb-2">
+          {/* Mode Switcher - Segmented Control */}
+          <div className="glass-panel p-1.5 rounded-2xl mb-10">
+            <div className="flex relative">
+              <div 
+                className={`absolute top-0 bottom-0 w-1/2 bg-white dark:bg-blue-600 rounded-xl shadow-sm transition-all duration-300 ease-out ${mode === 'hybrid' ? 'translate-x-full' : 'translate-x-0'}`}
+              />
               <button 
                 onClick={() => setMode("strict")}
-                className={`flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${mode === 'strict' ? 'bg-blue-500 text-white shadow-lg' : 'opacity-40 hover:opacity-100'}`}
+                className={`relative z-10 flex-1 py-2.5 rounded-xl text-[11px] font-extrabold uppercase tracking-widest transition-colors duration-300 ${mode === 'strict' ? 'text-blue-600 dark:text-white' : 'text-[var(--muted)] hover:text-[var(--foreground)]'}`}
               >
                 Strict
               </button>
               <button 
                 onClick={() => setMode("hybrid")}
-                className={`flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${mode === 'hybrid' ? 'bg-purple-500 text-white shadow-lg' : 'opacity-40 hover:opacity-100'}`}
+                className={`relative z-10 flex-1 py-2.5 rounded-xl text-[11px] font-extrabold uppercase tracking-widest transition-colors duration-300 ${mode === 'hybrid' ? 'text-blue-600 dark:text-white' : 'text-[var(--muted)] hover:text-[var(--foreground)]'}`}
               >
                 Hybrid
               </button>
             </div>
-            <p className="text-[9px] px-2 pb-1 opacity-40 leading-tight">
-              {mode === 'strict' 
-                ? "Fortress Mode: AI is forbidden from using knowledge outside your documents." 
-                : "Break-out Mode: AI combines your documents with its general intelligence."}
-            </p>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 space-y-8 custom-scrollbar">
-          {/* Workspaces */}
-          <div>
-            <p className="text-xs font-semibold opacity-40 uppercase tracking-wider mb-4 px-2">Your Vaults</p>
-            <div className="space-y-1">
+        <div className="flex-1 overflow-y-auto px-6 space-y-10 custom-scrollbar pb-10">
+          {/* Vaults */}
+          <section>
+            <p className="text-[11px] font-extrabold text-[var(--muted)] uppercase tracking-[0.2em] mb-5 px-2">Knowledge Vaults</p>
+            <div className="space-y-2">
               {workspaces.map(ws => (
                 <div key={ws.id} className="group relative">
                   <button
                     onClick={() => setActiveWorkspace(ws.id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
+                    className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 ${
                       activeWorkspace === ws.id 
-                      ? 'bg-blue-500/10 text-[var(--primary)] border border-blue-500/20' 
-                      : 'opacity-50 hover:bg-black/5 dark:hover:bg-white/5 hover:opacity-100'
+                      ? 'premium-card ring-1 ring-blue-500/20 text-[var(--primary)] bg-blue-500/5' 
+                      : 'hover:bg-black/5 dark:hover:bg-white/5 opacity-60 hover:opacity-100'
                     }`}
                   >
-                    <LayoutDashboard className="w-4 h-4" />
-                    <span className="text-sm font-medium">{ws.name}</span>
+                    <LayoutDashboard className={`w-4 h-4 ${activeWorkspace === ws.id ? 'text-[var(--primary)]' : 'text-[var(--muted)]'}`} />
+                    <span className="text-sm font-bold tracking-tight">{ws.name}</span>
                   </button>
                   <button 
                     onClick={(e) => handleDeleteWorkspace(ws.id, e)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1.5 text-red-500/50 hover:text-red-500 transition-all"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-2 text-red-500/60 hover:text-red-500 transition-all hover:bg-red-500/10 rounded-lg"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               ))}
             </div>
-          </div>
+          </section>
 
-          {/* Documents */}
+          {/* Active Vault Sources */}
           {activeWorkspace && (
-            <div className="animate-in fade-in slide-in-from-left-4 duration-500">
-              <div className="glass-panel p-4 mb-4">
-                <p className="text-xs font-semibold opacity-40 uppercase tracking-wider mb-4">Sources ({documents.length})</p>
-                <div className="space-y-1 max-h-48 overflow-y-auto custom-scrollbar">
+            <section className="animate-slide-up">
+              <div className="glass-panel p-5 rounded-3xl">
+                <div className="flex items-center justify-between mb-5">
+                  <p className="text-[11px] font-extrabold text-[var(--muted)] uppercase tracking-[0.2em]">Sources ({documents.length})</p>
+                  <label className="p-1.5 hover:bg-blue-500/10 rounded-lg cursor-pointer transition-colors text-blue-500">
+                    <FileUp className="w-4 h-4" />
+                    <input type="file" className="hidden" onChange={handleUpload} disabled={isIngesting} />
+                  </label>
+                </div>
+                
+                <div className="space-y-2 max-h-56 overflow-y-auto custom-scrollbar pr-2">
                   {documents.map(doc => (
-                    <div key={doc.id} className="flex items-center gap-3 px-3 py-1.5 rounded-lg opacity-60 hover:opacity-100 transition-all group relative">
-                      <div className={`w-1.5 h-1.5 rounded-full ${doc.status === 'processed' ? 'bg-green-500' : 'bg-yellow-500 animate-pulse'}`} />
-                      <span className="text-xs truncate flex-1">{doc.filename}</span>
+                    <div key={doc.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-transparent hover:border-[var(--border)] hover:bg-white/5 transition-all group">
+                      <div className={`w-2 h-2 rounded-full shrink-0 ${doc.status === 'processed' ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
+                      <span className="text-xs font-medium truncate flex-1 opacity-70 group-hover:opacity-100">{doc.filename}</span>
                       <button 
                         onClick={() => handleDeleteDocument(doc.id)}
-                        className="opacity-0 group-hover:opacity-100 text-red-500/50 hover:text-red-500 transition-all p-1"
+                        className="opacity-0 group-hover:opacity-100 text-[var(--muted)] hover:text-red-500 transition-all"
                       >
-                        <Trash2 className="w-3 h-3" />
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   ))}
                   {documents.length === 0 && (
-                    <p className="text-[10px] opacity-20 italic px-3">No documents yet</p>
+                    <div className="py-8 flex flex-col items-center justify-center opacity-30 text-center">
+                      <FileUp className="w-8 h-8 mb-2" />
+                      <p className="text-[10px] uppercase font-bold tracking-widest">No Documents</p>
+                    </div>
                   )}
                 </div>
               </div>
-
-              <label className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-black/10 dark:border-white/10 rounded-2xl hover:border-blue-500/50 hover:bg-blue-500/5 transition-all cursor-pointer group ${isIngesting ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                  {isIngesting ? (
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                      <p className="text-xs opacity-40">Ingesting...</p>
-                    </div>
-                  ) : (
-                    <>
-                      <FileUp className="w-6 h-6 opacity-20 group-hover:text-blue-500 transition-colors mb-2" />
-                      <p className="text-xs opacity-40">Drop document or click</p>
-                    </>
-                  )}
-                </div>
-                <input type="file" className="hidden" onChange={handleUpload} disabled={isIngesting} />
-              </label>
-            </div>
+            </section>
           )}
         </div>
 
-        <div className="p-4 mt-auto border-t border-black/10 dark:border-white/10">
-          <div className="glass-panel p-3 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-              <Shield className="w-4 h-4 text-white" />
-            </div>
-            <div className="flex-1">
-              <p className="text-[10px] font-bold opacity-40 uppercase tracking-widest">Encrypted</p>
-              <p className="text-xs font-medium truncate">Privacy Shield Active</p>
+        {/* Security Footnote */}
+        <div className="p-6 border-t border-[var(--border)]">
+          <div className="flex items-center gap-4 px-4 py-3 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <Shield className="w-5 h-5 shrink-0" />
+            <div>
+              <p className="text-[10px] font-extrabold uppercase tracking-widest leading-none mb-1">Encrypted</p>
+              <p className="text-[11px] font-bold opacity-80">Local Security Active</p>
             </div>
           </div>
         </div>
       </aside>
 
       {/* Main Chat Area */}
-      <main className="flex-1 flex flex-col relative transition-colors duration-300">
-        {/* Header */}
-        <header className="h-20 border-b border-black/10 dark:border-white/10 flex items-center justify-between px-8 bg-[var(--background)]/80 backdrop-blur-md z-10">
-          <div className="flex items-center gap-4">
-            <h2 className="font-bold text-xl tracking-tight">
-              {activeWorkspace 
-                ? workspaces.find(w => w.id === activeWorkspace)?.name 
-                : "Select a Vault"}
-            </h2>
+      <main className="flex-1 flex flex-col relative bg-white/40 dark:bg-black/20">
+        <header className="h-24 flex items-center justify-between px-10 border-b border-[var(--border)] backdrop-blur-xl bg-[var(--background)]/60 z-10">
+          <div className="flex items-center gap-5">
+            <div className="p-3 bg-blue-500/5 rounded-2xl border border-blue-500/10">
+              <LayoutDashboard className="w-6 h-6 text-blue-500" />
+            </div>
+            <div>
+              <h2 className="font-bold text-2xl tracking-tight leading-none mb-1.5">
+                {activeWorkspace 
+                  ? workspaces.find(w => w.id === activeWorkspace)?.name 
+                  : "Select a Vault"}
+              </h2>
+              <div className="flex items-center gap-2 opacity-60">
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em]">{mode === 'strict' ? 'Fortress Mode' : 'Genius Mode'}</span>
+                <span className="w-1 h-1 rounded-full bg-[var(--muted)]" />
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Workspace Active</span>
+              </div>
+            </div>
           </div>
+          
           <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2 opacity-40">
-              <Cpu className="w-4 h-4" />
-              <span className="text-xs font-semibold uppercase tracking-widest">{mode === 'strict' ? 'Strict Source-First' : 'Hybrid Genius'} Mode</span>
+            <div className="flex items-center gap-3 glass-panel px-4 py-2.5 rounded-2xl shadow-none">
+              <Cpu className="w-4 h-4 text-violet-500" />
+              <span className="text-[11px] font-bold uppercase tracking-widest opacity-60">LLM Instance: Flash-Pro</span>
             </div>
           </div>
         </header>
@@ -369,70 +372,77 @@ export default function HybridRAGDashboard() {
         {/* Chat Messages */}
         <div 
           ref={scrollRef}
-          className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar scroll-smooth"
+          className="flex-1 overflow-y-auto px-10 pt-10 pb-32 space-y-10 custom-scrollbar scroll-smooth"
         >
+          {messages.length === 0 && (
+            <div className="h-full flex flex-col items-center justify-center text-center opacity-20">
+              <Database className="w-20 h-20 mb-6" />
+              <h3 className="text-3xl font-bold tracking-tighter">Your Knowledge Assistant</h3>
+              <p className="text-lg font-medium">Upload documents to build your local brain.</p>
+            </div>
+          )}
+          
           {messages.map((msg) => (
-            <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-4 duration-500`}>
-              <div className={`max-w-2xl p-6 rounded-2xl ${
-                msg.role === 'user' 
-                  ? 'gradient-bg text-white shadow-xl shadow-blue-500/10' 
-                  : 'bg-[var(--secondary)] border border-black/5 dark:border-white/5'
-              }`}>
-                <div className="text-[15px] leading-relaxed opacity-90 prose dark:prose-invert max-w-none">
-                  <ReactMarkdown>{msg.content}</ReactMarkdown>
-                </div>
-                
-                {msg.sources && msg.sources.length > 0 && (
-                  <div className="mt-6 pt-6 border-t border-black/10 dark:border-white/10">
-                    <p className="text-[10px] font-bold uppercase tracking-widest opacity-40 mb-3">Context Sources (RRF Score)</p>
-                    <div className="flex flex-wrap gap-2">
-                      {msg.sources.map((source, idx) => (
-                        <div 
-                          key={idx} 
-                          title={source.text}
-                          className="px-3 py-1.5 rounded-lg bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5 flex items-center gap-2 hover:bg-black/10 dark:hover:bg-white/10 transition-all cursor-pointer"
-                        >
-                          <span className="text-[11px] font-mono text-blue-500">#{(source.score * 100).toFixed(1)}%</span>
-                          <span className="text-[11px] opacity-60 truncate max-w-[150px]">{source.filename || `Chunk ${source.chunk_index}`}</span>
-                          <ExternalLink className="w-3 h-3 opacity-20" />
-                        </div>
-                      ))}
-                    </div>
+            <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-slide-up`}>
+              <div className={`max-w-3xl relative group ${msg.role === 'user' ? 'order-2' : 'order-1'}`}>
+                <div className={`p-6 rounded-3xl ${
+                  msg.role === 'user' 
+                    ? 'bg-blue-600 text-white shadow-2xl shadow-blue-600/20' 
+                    : 'bg-[var(--card-bg)] border border-[var(--border)] shadow-sm'
+                }`}>
+                  <div className="text-[16px] leading-relaxed prose dark:prose-invert max-w-none">
+                    <ReactMarkdown>{msg.content}</ReactMarkdown>
                   </div>
-                )}
+                  
+                  {msg.sources && msg.sources.length > 0 && (
+                    <div className="mt-8 pt-6 border-t border-[var(--border)]">
+                      <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-[var(--muted)] mb-4">Context Citations</p>
+                      <div className="flex flex-wrap gap-2.5">
+                        {msg.sources.map((source, idx) => (
+                          <div 
+                            key={idx} 
+                            title={source.text}
+                            className="px-3.5 py-2 rounded-xl bg-black/5 dark:bg-white/5 border border-[var(--border)] flex items-center gap-3 hover:scale-[1.02] transition-all cursor-default"
+                          >
+                            <span className="text-[11px] font-bold text-blue-500">#{Math.round(source.score * 100)}</span>
+                            <span className="text-[11px] font-bold opacity-70 truncate max-w-[180px]">{source.filename || `Chunk ${source.chunk_index}`}</span>
+                            <ExternalLink className="w-3.5 h-3.5 opacity-30" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Input Area */}
-        <div className="p-8 pt-0">
-          <form onSubmit={handleAsk} className="relative group">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
-            <div className="relative flex items-center bg-[var(--secondary)] rounded-2xl overflow-hidden p-2 border border-black/10 dark:border-white/10 shadow-2xl">
-              <div className="flex items-center justify-center w-12 h-12 opacity-20">
-                <Search className="w-5 h-5" />
-              </div>
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={activeWorkspace ? "Ask anything about your documents..." : "Select a workspace to start chatting"}
-                disabled={!activeWorkspace}
-                className="flex-1 bg-transparent border-none outline-none text-[15px] placeholder:opacity-20 py-4"
-              />
-              <button 
-                type="submit"
-                disabled={!activeWorkspace || !query}
-                className="w-12 h-12 flex items-center justify-center rounded-xl bg-[var(--primary)] text-white hover:scale-95 disabled:opacity-50 disabled:scale-100 transition-all shadow-lg shadow-blue-500/20"
-              >
-                <Send className="w-5 h-5" />
-              </button>
+        {/* Floating Input Area */}
+        <div className="absolute bottom-10 inset-x-0 flex justify-center px-10 z-20">
+          <form 
+            onSubmit={handleAsk} 
+            className="w-full max-w-4xl glass-panel p-2.5 rounded-[2.5rem] shadow-2xl flex items-center gap-4 focus-within:ring-2 ring-blue-500/50 transition-all duration-500"
+          >
+            <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
+              <Search className="w-5 h-5 text-blue-500" />
             </div>
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={activeWorkspace ? "Ask your documents anything..." : "Select a vault to start"}
+              disabled={!activeWorkspace}
+              className="flex-1 bg-transparent border-none outline-none text-[16px] font-medium placeholder:text-[var(--muted)]"
+            />
+            <button 
+              type="submit"
+              disabled={!query || !activeWorkspace}
+              className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center hover:scale-105 active:scale-95 disabled:opacity-30 disabled:hover:scale-100 transition-all shadow-lg shadow-blue-500/20"
+            >
+              <Send className="w-5 h-5" />
+            </button>
           </form>
-          <p className="text-center text-[10px] opacity-20 mt-4 tracking-widest uppercase">
-            Hybrid RAG v1.0 • Gemini Flash • PostgreSQL Vectors
-          </p>
         </div>
       </main>
     </div>
