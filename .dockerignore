@@ -1,0 +1,10 @@
+.venv
+__pycache__
+*.pyc
+.git
+frontend
+.next
+node_modules
+uploads
+*.db
+.DS_Store

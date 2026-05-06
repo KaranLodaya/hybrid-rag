@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv
+venv/
+ENV/
+env/
+.env
+*.log
+
+# Node.js
+node_modules/
+dist/
+.next/
+out/
+build/
+.DS_Store
+
+# Project specific
+uploads/
+*.db
+.gemini/

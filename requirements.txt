@@ -1,0 +1,16 @@
+fastapi>=0.110.0
+uvicorn>=0.27.1
+celery>=5.3.6
+redis>=5.0.1
+pydantic-settings>=2.2.1
+sqlalchemy>=2.0.27
+psycopg[binary]>=3.1.18
+pgvector>=0.2.5
+langchain>=0.1.0
+langchain-text-splitters>=0.0.1
+langchain-community>=0.0.24
+langchain-google-genai>=0.0.9
+sentence-transformers>=2.5.1
+pypdf>=4.1.0
+python-multipart>=0.0.9
+python-dotenv>=1.0.1
