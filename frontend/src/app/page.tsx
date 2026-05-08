@@ -113,7 +113,7 @@ export default function HybridRAGDashboard() {
                     setMousePos({ x: e.clientX, y: e.clientY });
                     setActiveCitation(sources[index]);
                   }}
-                  className="citation-circle inline-flex items-center justify-center mx-1 cursor-help hover:bg-white hover:text-black transition-colors duration-100"
+                  className="citation-circle inline-flex items-center justify-center mx-1 cursor-help hover:bg-[var(--background)] hover:text-[var(--foreground)] transition-colors duration-100"
                 >
                   {index + 1}
                 </span>
@@ -537,27 +537,27 @@ export default function HybridRAGDashboard() {
 
           <button 
             onClick={handleCreateWorkspace}
-            className="w-full py-3.5 px-4 rounded-2xl bg-[var(--secondary)] text-[var(--foreground)] font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2.5 hover:opacity-80 hover:scale-[0.98] transition-all active:scale-95 border border-white/5 mb-8 shadow-xl"
+            className="w-full py-3.5 px-4 rounded-2xl bg-[var(--secondary)] text-[var(--foreground)] font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2.5 hover:opacity-80 hover:scale-[0.98] transition-all active:scale-95 border border-[var(--border)] mb-8 shadow-xl"
           >
             <Plus className="w-5 h-5" />
             New Vault
           </button>
 
           {/* Mode Switcher - Segmented Control */}
-          <div className="bg-[var(--secondary)] p-1.5 rounded-2xl mb-10 border border-white/5">
+          <div className="bg-[var(--secondary)] p-1.5 rounded-2xl mb-10 border border-[var(--border)]">
             <div className="flex relative">
               <div 
-                className={`absolute top-0 bottom-0 w-1/2 bg-[var(--background)] rounded-xl shadow-lg transition-all duration-300 ease-out border border-white/10 ${mode === 'hybrid' ? 'translate-x-full' : 'translate-x-0'}`}
+                className={`absolute top-0 bottom-0 w-1/2 bg-[var(--background)] rounded-xl shadow-lg transition-all duration-300 ease-out border border-[var(--border)] ${mode === 'hybrid' ? 'translate-x-full' : 'translate-x-0'}`}
               />
               <button 
                 onClick={() => setMode("strict")}
-                className={`relative z-10 flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors duration-300 ${mode === 'strict' ? 'text-white' : 'text-white/30 hover:text-white/60'}`}
+                className={`relative z-10 flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors duration-300 ${mode === 'strict' ? 'text-[var(--foreground)]' : 'text-[var(--muted)] hover:text-[var(--foreground)]'}`}
               >
                 Strict
               </button>
               <button 
                 onClick={() => setMode("hybrid")}
-                className={`relative z-10 flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors duration-300 ${mode === 'hybrid' ? 'text-white' : 'text-white/30 hover:text-white/60'}`}
+                className={`relative z-10 flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors duration-300 ${mode === 'hybrid' ? 'text-[var(--foreground)]' : 'text-[var(--muted)] hover:text-[var(--foreground)]'}`}
               >
                 Hybrid
               </button>
@@ -577,7 +577,7 @@ export default function HybridRAGDashboard() {
                     onClick={() => setActiveWorkspace(ws.id)}
                     className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 ${
                       activeWorkspace === ws.id 
-                      ? 'bg-[var(--secondary)] ring-1 ring-white/10 text-[var(--foreground)] shadow-lg' 
+                      ? 'bg-[var(--secondary)] ring-1 ring-[var(--border)] text-[var(--foreground)] shadow-lg' 
                       : 'hover:bg-white/5 opacity-60 hover:opacity-100'
                     }`}
                   >
@@ -605,15 +605,15 @@ export default function HybridRAGDashboard() {
                 
                 <div className="space-y-2 max-h-56 overflow-y-auto custom-scrollbar pr-2">
                   {uploadProgress && (
-                    <div className="rounded-xl border border-white/20 bg-white/5 p-3 mb-3 animate-slide-up">
+                    <div className="rounded-xl border border-[var(--border)] bg-[var(--secondary)] p-3 mb-3 animate-slide-up shadow-sm">
                       <div className="flex items-center gap-2 mb-2">
-                        <Loader2 className={`w-4 h-4 text-white ${
+                        <Loader2 className={`w-4 h-4 text-[var(--foreground)] ${
                           uploadProgress.status === "processed" ||
                           (uploadProgress.status === "failed" && uploadProgress.progress?.current_stage !== "awaiting_local_fallback_confirmation")
                             ? ""
                             : "animate-spin"
                         }`} />
-                        <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-white">
+                        <p className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-[var(--foreground)]">
                           {uploadProgress.status === "processed"
                             ? "Ingestion Complete"
                             : uploadProgress.progress?.current_stage === "awaiting_local_fallback_confirmation"
@@ -662,7 +662,7 @@ export default function HybridRAGDashboard() {
                               type="button"
                               onClick={handleResumeWithLocalEmbeddings}
                               disabled={isResumingWithLocal}
-                              className="flex-1 rounded-lg bg-white text-black text-[10px] font-black uppercase tracking-wide py-2 disabled:opacity-50 hover:opacity-80 transition-all"
+                              className="flex-1 rounded-lg bg-[var(--foreground)] text-[var(--background)] text-[10px] font-black uppercase tracking-wide py-2 disabled:opacity-50 hover:opacity-80 transition-all"
                             >
                               {isResumingWithLocal ? "Starting..." : "Use Local"}
                             </button>
@@ -670,7 +670,7 @@ export default function HybridRAGDashboard() {
                               type="button"
                               onClick={handleDismissLocalFallback}
                               disabled={isResumingWithLocal}
-                              className="flex-1 rounded-lg bg-transparent border border-white/10 text-[var(--muted)] text-[10px] font-bold uppercase tracking-wide py-2 hover:bg-white/5 hover:text-white transition-colors disabled:opacity-50"
+                              className="flex-1 rounded-lg bg-transparent border border-[var(--border)] text-[var(--muted)] text-[10px] font-bold uppercase tracking-wide py-2 hover:bg-[var(--secondary)] hover:text-[var(--foreground)] transition-colors disabled:opacity-50"
                             >
                               No Thanks
                             </button>
@@ -683,7 +683,7 @@ export default function HybridRAGDashboard() {
                     </div>
                   )}
                   {documents.map(doc => (
-                    <div key={doc.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-transparent hover:border-[var(--border)] hover:bg-white/5 transition-all group">
+                    <div key={doc.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-transparent hover:border-[var(--border)] hover:bg-[var(--secondary)] transition-all group">
                       <div className={`w-2 h-2 rounded-full shrink-0 ${doc.status === 'processed' ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
                       <span className="text-xs font-medium truncate flex-1 opacity-70 group-hover:opacity-100">{doc.filename}</span>
                       <button 
@@ -696,9 +696,9 @@ export default function HybridRAGDashboard() {
                   ))}
                   
                   {documents.length === 0 ? (
-                    <label className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-[var(--border)] rounded-3xl cursor-pointer hover:bg-white/5 hover:border-white/30 transition-all group animate-pulse-subtle">
-                      <FileUp className="w-8 h-8 mb-3 text-[var(--muted)] group-hover:text-white group-hover:scale-110 transition-all duration-300" />
-                      <p className="text-[11px] font-extrabold uppercase tracking-widest text-[var(--muted)] group-hover:text-white">Click to Upload</p>
+                    <label className="flex flex-col items-center justify-center py-12 border-2 border-dashed border-[var(--border)] rounded-3xl cursor-pointer hover:bg-[var(--secondary)] hover:border-[var(--muted)] transition-all group animate-pulse-subtle">
+                      <FileUp className="w-8 h-8 mb-3 text-[var(--muted)] group-hover:text-[var(--foreground)] group-hover:scale-110 transition-all duration-300" />
+                      <p className="text-[11px] font-extrabold uppercase tracking-widest text-[var(--muted)] group-hover:text-[var(--foreground)]">Click to Upload</p>
                       <p className="text-[9px] opacity-40 mt-1">PDF, DOCX, TXT, or Markdown</p>
                       <input type="file" className="hidden" onChange={handleUpload} disabled={isIngesting} />
                     </label>
@@ -887,24 +887,24 @@ export default function HybridRAGDashboard() {
               top: mousePos.y + 20, 
               left: Math.min(mousePos.x, typeof window !== 'undefined' ? window.innerWidth - 380 : 0) 
             }}
-            className="fixed w-80 bg-[var(--secondary)] backdrop-blur-3xl border border-white/10 z-[100] p-6 rounded-2xl shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in duration-200 pointer-events-none"
+            className="fixed w-80 bg-[var(--background)] backdrop-blur-3xl border border-[var(--border)] z-[100] p-6 rounded-2xl shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in duration-200 pointer-events-none"
           >
             <header className="flex items-center justify-between mb-4">
-              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">Evidence Chunk</span>
-              <span className="text-[10px] font-black text-white px-2 py-0.5 rounded-md bg-white/5 border border-white/10">
+              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--muted)]">Evidence Chunk</span>
+              <span className="text-[10px] font-black text-[var(--foreground)] px-2 py-0.5 rounded-md bg-[var(--secondary)] border border-[var(--border)]">
                 {(activeCitation.score * 100).toFixed(0)}% Match
               </span>
             </header>
             
-            <p className="text-xs leading-relaxed italic text-white/80 mb-5 border-l-2 border-white/20 pl-4">
+            <p className="text-xs leading-relaxed italic text-[var(--foreground)] opacity-80 mb-5 border-l-2 border-[var(--border)] pl-4">
               "{activeCitation.text}"
             </p>
 
-            <footer className="pt-4 border-t border-white/5 flex items-center justify-between">
-              <span className="text-[10px] font-bold text-white/30 truncate max-w-[150px]">
+            <footer className="pt-4 border-t border-[var(--border)] flex items-center justify-between">
+              <span className="text-[10px] font-bold text-[var(--muted)] truncate max-w-[150px]">
                 {activeCitation.filename}
               </span>
-              <span className="text-[9px] font-black text-white/20 uppercase tracking-tighter">
+              <span className="text-[9px] font-black text-[var(--muted)] uppercase tracking-tighter">
                 Ref: #{activeCitation.chunk_index}
               </span>
             </footer>
