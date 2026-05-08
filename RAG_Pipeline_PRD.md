@@ -57,7 +57,7 @@ In simple terms, this project is a **Source-First AI Assistant** that prioritize
     - **Mode 1 (Strict):** A "Fortress" mode where the AI is forbidden from answering anything not found in your sources.
     - **Mode 2 (Hybrid):** A "Break-out" mode where the AI combines your sources with its general knowledge for broader context.
 - **Provides Proof:** Every factual claim in RAG mode includes a citation `[1]` that reveals an **Evidence Tooltip** on hover, showing the exact source snippet without leaving the chat.
-- **Aesthetic:** High-end "Dark Studio" monochrome interface (`#0F0F0F`) designed for long-form research and focus.
+- **Aesthetic:** High-end "Modern Monochrome" interface designed for long-form research, featuring high-fidelity dark ("Midnight Matte") and light ("Pure Studio") modes.
 
 ### 1.2 Core Innovation
 
@@ -72,7 +72,7 @@ The technical innovation is the **Dual-Mode Grounding Engine** combined with **S
 | **Dual-Mode Grounding** | **Mode 1 (Strict):** Answers ONLY from sources; **Mode 2 (Hybrid):** AI can "break out" and use general knowledge. |
 | **Unified Storage** | Single PostgreSQL 16 instance for Metadata + Vector + Sparse search. |
 | **Workspace Isolation** | Logical multi-tenancy for personal/corporate separation. |
-| **Dark Studio UI** | Ultra-minimalist monochrome research environment with hover-evidence badges. |
+| **Modern Monochrome UI** | System-aware, ultra-minimalist research environment with hover-evidence badges. Supports seamless dark/light transitions. |
 | **Adaptive TTL Engine** | Aggressively prunes old data to stay within free-tier storage limits (e.g., 1GB DB). |
 
 ---
