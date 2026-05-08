@@ -32,27 +32,31 @@ class HybridRetriever:
         return gemini_vector, bge_vector
 
     def search(self, workspace_id: str, query: str, limit: int = 10) -> List[Dict[str, Any]]:
-        """Executes the Reciprocal Rank Fusion (RRF) SQL Query across vectors and sparse text."""
+        """
+        Executes an improved Reciprocal Rank Fusion (RRF) search.
+        Uses more flexible keyword matching and robust vector routing.
+        """
         db = SessionLocal()
         
+        # 1. Get embeddings
         gemini_vec, bge_vec = self.get_query_embeddings(query)
         
-        # If a vector is empty, we pass a dummy vector to prevent SQL errors, 
-        # but the RRF score for that CTE will simply be very low or we handle it via logic.
-        # Since pgvector doesn't like empty arrays, we need to pass a zero array of correct dimension.
-        # However, a cleaner way is to dynamically build the CTEs based on available vectors.
+        # 2. Build Query
+        # We use dimensions to route vectors instead of fragile strings
+        # Gemini: 768 dims, BGE: 384 dims (usually)
         
-        # Build CTEs dynamically
         ctes = []
         unions = []
         params = {"workspace_id": workspace_id, "query": query, "k": self.k, "limit": limit}
         
         if gemini_vec:
+            # Match by dimension and workspace
             ctes.append(f"""
             gemini_hits AS (
                 SELECT id, 1.0 / (ROW_NUMBER() OVER (ORDER BY embedding <=> CAST(:gemini_query_vector AS vector)) + :k) as rrf_score
                 FROM chunks
-                WHERE embedding_model = '{settings.query_embedding_model}' AND workspace_id = CAST(:workspace_id AS UUID)
+                WHERE vector_dims(embedding) = {len(gemini_vec)} 
+                AND workspace_id = CAST(:workspace_id AS UUID)
                 LIMIT 50
             )""")
             unions.append("SELECT * FROM gemini_hits")
@@ -63,23 +67,26 @@ class HybridRetriever:
             bge_hits AS (
                 SELECT id, 1.0 / (ROW_NUMBER() OVER (ORDER BY embedding <=> CAST(:bge_query_vector AS vector)) + :k) as rrf_score
                 FROM chunks
-                WHERE embedding_model = '{settings.ingestion_embedding_model}' AND workspace_id = CAST(:workspace_id AS UUID)
+                WHERE vector_dims(embedding) = {len(bge_vec)} 
+                AND workspace_id = CAST(:workspace_id AS UUID)
                 LIMIT 50
             )""")
             unions.append("SELECT * FROM bge_hits")
             params["bge_query_vector"] = str(bge_vec)
 
-        # Always add Sparse Search CTE
+        # 3. Improved Sparse Search (Keyword Search)
+        # We use websearch_to_tsquery for better natural language handling
         ctes.append("""
         sparse_hits AS (
-            SELECT id, 1.0 / (ROW_NUMBER() OVER (ORDER BY ts_rank_cd(search_vector, plainto_tsquery('english', :query)) DESC) + :k) as rrf_score
+            SELECT id, 1.0 / (ROW_NUMBER() OVER (ORDER BY ts_rank_cd(search_vector, websearch_to_tsquery('english', :query)) DESC) + :k) as rrf_score
             FROM chunks
-            WHERE search_vector @@ plainto_tsquery('english', :query) AND workspace_id = CAST(:workspace_id AS UUID)
+            WHERE (search_vector @@ websearch_to_tsquery('english', :query) OR text ILIKE '%' || :query || '%')
+            AND workspace_id = CAST(:workspace_id AS UUID)
             LIMIT 50
         )""")
         unions.append("SELECT * FROM sparse_hits")
 
-        # Assemble Final Query
+        # 4. Assemble Final Query
         sql_query = f"""
         WITH {', '.join(ctes)}
         SELECT c.id, c.text, c.document_id, c.chunk_index, d.filename, SUM(combined.rrf_score) as total_score
@@ -96,11 +103,10 @@ class HybridRetriever:
         try:
             result = db.execute(text(sql_query), params).fetchall()
             
-            # Format results
             hits = []
             for row in result:
                 hits.append({
-                    "chunk_id": str(row[0]),
+                    "id": str(row[0]),
                     "text": row[1],
                     "document_id": str(row[2]),
                     "chunk_index": row[3],
@@ -108,6 +114,9 @@ class HybridRetriever:
                     "score": float(row[5])
                 })
             return hits
+        except Exception as e:
+            print(f"Retrieval Error: {e}")
+            return []
         finally:
             db.close()
 

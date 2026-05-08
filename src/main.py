@@ -2,10 +2,10 @@ import shutil
 import os
 import uuid
 from typing import List
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException, BackgroundTasks
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from .config import settings
-from .database import init_db, SessionLocal, Workspace, Document
+from .database import init_db, SessionLocal, Workspace, Document, Chunk
 from .worker import ingest_document
 
 app = FastAPI(title="Hybrid RAG API", version="1.0.0")
@@ -25,8 +25,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @app.on_event("startup")
 def startup_event():
-    # init_db()
-    pass
+    init_db()
 
 @app.get("/v1/workspaces")
 def list_workspaces():
@@ -97,7 +96,12 @@ async def ingest_file(
             filename=file.filename,
             file_hash="", # Should calculate hash in production
             format=file_type,
-            status="pending"
+            status="pending",
+            doc_metadata={
+                "ingestion_progress": {
+                    "current_stage": "queued"
+                }
+            }
         )
         db.add(new_doc)
         db.commit()
@@ -108,7 +112,8 @@ async def ingest_file(
             file_path=file_path,
             file_type=file_type,
             workspace_id=workspace_id,
-            batch_size=1 # For single file upload
+            batch_size=1, # For single file upload
+            force_local=False,
         )
 
         return {"document_id": file_id, "status": "processing"}
@@ -148,13 +153,60 @@ def list_documents(workspace_id: str):
     db.close()
     return docs
 
+@app.post("/v1/documents/{document_id}/resume-local")
+def resume_document_with_local_embeddings(document_id: str):
+    db = SessionLocal()
+    try:
+        doc_uuid = uuid.UUID(document_id)
+        doc = db.query(Document).filter(Document.id == doc_uuid).first()
+        if not doc:
+            raise HTTPException(status_code=404, detail="Document not found")
+
+        ingestion_progress = (doc.doc_metadata or {}).get("ingestion_progress", {})
+        if not ingestion_progress.get("can_resume_with_local"):
+            raise HTTPException(status_code=400, detail="Local fallback is not available for this document")
+
+        file_path = os.path.join(UPLOAD_DIR, f"{document_id}.{doc.format}")
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="Original uploaded file is missing")
+
+        db.query(Chunk).filter(Chunk.document_id == doc_uuid).delete(synchronize_session=False)
+
+        doc.status = "processing"
+        doc.doc_metadata = {
+            **(doc.doc_metadata or {}),
+            "ingestion_progress": {
+                **ingestion_progress,
+                "current_stage": "local_fallback_queued",
+                "user_message": "Continuing ingestion with local embeddings.",
+            },
+        }
+        db.commit()
+
+        ingest_document.delay(
+            document_id=document_id,
+            file_path=file_path,
+            file_type=doc.format,
+            workspace_id=str(doc.workspace_id),
+            batch_size=9999,
+            force_local=True,
+        )
+
+        return {"status": "processing", "document_id": document_id, "mode": "local_fallback"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        db.close()
+
 @app.delete("/v1/documents/{document_id}")
 def delete_document(document_id: str):
     db = SessionLocal()
     try:
         doc_uuid = uuid.UUID(document_id)
         # 1. Delete associated chunks first (due to foreign key)
-        from .database import Chunk
         db.query(Chunk).filter(Chunk.document_id == doc_uuid).delete()
         # 2. Delete the document record
         db.query(Document).filter(Document.id == doc_uuid).delete()

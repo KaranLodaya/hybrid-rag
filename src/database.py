@@ -59,6 +59,9 @@ class Chunk(Base):
     document = relationship("Document", back_populates="chunks")
 
 def init_db():
+    with engine.connect() as conn:
+        conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+        conn.commit()
     Base.metadata.create_all(bind=engine)
     # Create the search_vector column manually as a generated tsvector
     with engine.connect() as conn:

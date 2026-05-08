@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   db:
     image: paradedb/paradedb:latest
@@ -31,6 +29,7 @@ services:
       - DATABASE_URL=postgresql+psycopg://postgres:postgres@db:5432/hybrid_rag
       - REDIS_URL=redis://redis:6379/0
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
     depends_on:
       - db
       - redis
@@ -45,6 +44,7 @@ services:
       - DATABASE_URL=postgresql+psycopg://postgres:postgres@db:5432/hybrid_rag
       - REDIS_URL=redis://redis:6379/0
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
     depends_on:
       - db
       - redis

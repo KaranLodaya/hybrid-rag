@@ -6,11 +6,13 @@ class Settings(BaseSettings):
 
     # API Keys
     google_api_key: str = ""
+    huggingface_api_key: str = ""
     
     # Embedding Configuration
-    embedding_provider: Literal["openai", "gemini", "huggingface", "local"] = "local"
-    ingestion_embedding_model: str = "models/gemini-embedding-001"
+    embedding_provider: Literal["openai", "gemini", "huggingface", "local"] = "gemini"
+    ingestion_embedding_model: str = "BAAI/bge-small-en-v1.5"
     query_embedding_model: str = "models/gemini-embedding-001"
+    hf_embedding_model: str = "BAAI/bge-small-en-v1.5"
     llm_model: str = "models/gemini-flash-latest"
     
     # Database (Unified)

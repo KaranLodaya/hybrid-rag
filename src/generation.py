@@ -21,30 +21,30 @@ class Generator:
         if not contexts and mode == "strict":
             return "I'm sorry, but I don't have this information in your uploaded sources. (Strict Source-First Mode Active)"
 
-        # 3. Prepare the context string
-        context_text = "\n\n".join([f"Source: {ctx['filename']} (Index {ctx['chunk_index']}):\n{ctx['text']}" for ctx in contexts])
+        # 3. Prepare the context string with explicit numbering
+        context_text = "\n\n".join([f"Source [{i+1}]: {ctx['filename']} (Index {ctx['chunk_index']}):\n{ctx['text']}" for i, ctx in enumerate(contexts)])
         
         if mode == "strict":
             system_instruction = (
                 "You are a Strict Source-First Assistant. Your knowledge is strictly limited to the provided context. "
                 "1. If the answer is not in the context, say: 'I don't have this information in your uploaded sources.' "
                 "2. DO NOT use your own training data to answer factual questions. "
-                "3. Always cite sources using [Filename]."
+                "3. Always cite every claim using the numeric source label like [1], [2] at the end of the sentence."
             )
         else:
             system_instruction = (
                 "You are a Hybrid AI Assistant. Use the provided context as your primary source, but you are allowed to "
-                "supplement with your general knowledge (Break-out mode). "
-                "Always cite sources using [Filename] if the information came from them."
+                "supplement with your general knowledge. "
+                "Always cite sources using the numeric label like [1], [2] if the information came from them."
             )
 
         prompt = f"""
         {system_instruction}
         
-        USER QUESTION: {query}
-        
         CONTEXT SOURCES:
         {context_text if context_text else "No specific documents found."}
+        
+        USER QUESTION: {query}
         
         FINAL ANSWER:
         """

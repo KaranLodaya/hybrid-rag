@@ -4,9 +4,9 @@
 ---
 
 > **Version:** 1.0 — Dual-Audience Architecture (Enterprise & Personal)
-> **Status:** Draft
+> **Status:** Active Development (Phases 0, 1, 3 Complete)
 > **Author:** Solo Portfolio Project
-> **Last Updated:** April 2026
+> **Last Updated:** May 2026
 > **Target Scale:** 1,000–100,000+ documents (Logical Workspace Isolation)
 > **Deployment:** Render (free tier) · Docker-first · GCP/AWS scalable
 > **Auth:** API Key + Multi-tenant JWT Authentication
@@ -56,7 +56,8 @@ In simple terms, this project is a **Source-First AI Assistant** that prioritize
 - **Dual Personality:**
     - **Mode 1 (Strict):** A "Fortress" mode where the AI is forbidden from answering anything not found in your sources.
     - **Mode 2 (Hybrid):** A "Break-out" mode where the AI combines your sources with its general knowledge for broader context.
-- **Provides Proof:** Every factual claim in RAG mode includes a citation `[1]` linked to your source.
+- **Provides Proof:** Every factual claim in RAG mode includes a citation `[1]` that reveals an **Evidence Tooltip** on hover, showing the exact source snippet without leaving the chat.
+- **Aesthetic:** High-end "Dark Studio" monochrome interface (`#0F0F0F`) designed for long-form research and focus.
 
 ### 1.2 Core Innovation
 
@@ -71,6 +72,7 @@ The technical innovation is the **Dual-Mode Grounding Engine** combined with **S
 | **Dual-Mode Grounding** | **Mode 1 (Strict):** Answers ONLY from sources; **Mode 2 (Hybrid):** AI can "break out" and use general knowledge. |
 | **Unified Storage** | Single PostgreSQL 16 instance for Metadata + Vector + Sparse search. |
 | **Workspace Isolation** | Logical multi-tenancy for personal/corporate separation. |
+| **Dark Studio UI** | Ultra-minimalist monochrome research environment with hover-evidence badges. |
 | **Adaptive TTL Engine** | Aggressively prunes old data to stay within free-tier storage limits (e.g., 1GB DB). |
 
 ---
@@ -207,6 +209,8 @@ class Chunk(BaseModel):
 
 ---
 
+## 7. API Contract
+
 | Method | Endpoint | Description |
 |---|---|---|
 | **POST** | `/v1/ingest` | Upload and process documents (PDF, MD, etc.). Triggers background Celery task. |
@@ -218,7 +222,7 @@ class Chunk(BaseModel):
 
 ---
 
-## 8. Phase 0 — Infrastructure and Project Scaffolding
+## 8. Phase 0 — Infrastructure and Project Scaffolding [COMPLETED]
 
 ### Tasks
 
@@ -249,30 +253,32 @@ class Settings(BaseSettings):
 
 ---
 
-## 9. Phase 1 — Document Ingestion and Chunking Pipeline
+## 9. Phase 1 — Document Ingestion and Chunking Pipeline [COMPLETED]
 
 ### Tasks
 
-#### 9.1 Dynamic Ingestion Routing
-The system automatically selects the embedding provider based on the ingestion volume to balance precision and cost:
+#### 9.1 Dynamic Ingestion Routing (Hybrid Gemini/HF API)
+The system automatically selects the embedding provider to balance precision and cost:
 
-1. **Precision Path (Small Batches: ≤ 5 PDFs)**:
-   - Provider: **Google Gemini (`text-embedding-004`)**.
-   - Justification: Highest retrieval quality, handled via API. Cost is negligible for small volumes.
-2. **Efficiency Path (Bulky Ingestion: > 5 PDFs)**:
-   - Provider: **Local BGE (`BAAI/bge-small-en-v1.5`)**.
-   - Justification: Zero API cost, no rate limits, high throughput for initial or bulk data loads.
+1. **Precision Path (Primary)**:
+   - Provider: **Google Gemini (`models/gemini-embedding-001`)**.
+   - Justification: Highest retrieval quality. Managed via API.
+   - **Throttling**: Implemented **4s delay (RPM Throttling)** between batches to stay within Gemini Free Tier limits (15 RPM).
+2. **Efficiency/Fallback Path (High Volume)**:
+   - Provider: **Hugging Face Inference API (`BAAI/bge-small-en-v1.5`)**.
+   - Justification: Used when Gemini quotas are hit. Zero-bloat integration (no local PyTorch download required).
 
-#### 9.2 Simplified Indexing
-- **Embedding Model Tagging**: Each chunk is tagged with `embedding_model` metadata. This is critical for Phase 2 retrieval.
-- **Database-Backed Sparse Index**: `pg_search` creates and maintains the sparse index automatically within Postgres, ensuring the index is part of the SQL ACID transaction.
+#### 9.2 Simplified Indexing & Progress
+- **Real-time Progress UI**: Added stages for Loading -> Splitting -> Embedding -> Finalizing.
+- **Embedding Model Tagging**: Each chunk is tagged with `embedding_model` metadata.
+- **Database-Backed Sparse Index**: `pg_search` handles sparse indexing within Postgres.
 - **Celery Task Workflow**:
   - `detect_batch_volume()` -> `select_provider()` -> `chunk()` -> `embed()` -> `insert_to_postgres()`.
   - Postgres handles both Vector (pgvector) and Sparse (pg_search) indexing on insert.
 
 ---
 
-## 10. Phase 2 — Hybrid Retrieval Engine
+## 10. Phase 2 — Hybrid Retrieval Engine [COMPLETED]
 
 ### Tasks
 
@@ -321,24 +327,19 @@ LIMIT 10;
 
 ---
 
-## 11. Phase 3 — Generation and Citation Layer
+## 11. Phase 3 — Generation and Citation Layer [COMPLETED]
 
 ### Tasks
 
 #### 11.1 Dual-Mode Grounding Engine
-Connect the Hybrid Search output to an LLM (Gemini Pro) using a configurable grounding strategy:
+Connect the Hybrid Search output to an LLM (Gemini 1.5 Flash) using a configurable grounding strategy:
+- **Status**: Implemented with Gemini 1.5 Flash integration.
+- **Strict vs Hybrid**: UI toggle implemented to switch between grounding modes.
 
-1. **Mode 1: Strict (Fortress Mode)**:
-   - **Constraint**: The AI answers *only* using retrieved context.
-   - **Internal Knowledge**: Restricted to small talk/greetings only.
-   - **Fallback**: If no context is found for a factual query, the AI says "I don't have this info in your sources."
-2. **Mode 2: Hybrid (Break-out Mode)**:
-   - **Constraint**: The AI uses retrieved context as the *primary* source but is allowed to supplement with general training knowledge if the context is thin.
-   - **Goal**: Provides a more "intelligent" conversational feel while still prioritizing local facts.
-
-#### 11.2 Source Attribution (Citations)
-- **Chunk Tracking**: Map AI statements back to specific document IDs and chunk indices.
-- **RRF Visualization**: Display the relevance scores of sources used in the answer.
+#### 11.2 Premium UI & Source Attribution
+- **Cold-Start Warming UI**: Implemented a "Warming Up Engines" pulse-animation overlay for Render free-tier spin-ups.
+- **Chat Persistence**: Added LocalStorage-based chat history and workspace management.
+- **Source Attribution**: Implemented markdown-based citations and source mapping.
 
 ---
 
