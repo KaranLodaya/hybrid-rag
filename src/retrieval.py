@@ -104,15 +104,27 @@ class HybridRetriever:
             result = db.execute(text(sql_query), params).fetchall()
             
             hits = []
+            retrieved_doc_ids = []
             for row in result:
+                doc_id = str(row[2])
+                retrieved_doc_ids.append(uuid.UUID(doc_id))
                 hits.append({
                     "id": str(row[0]),
                     "text": row[1],
-                    "document_id": str(row[2]),
+                    "document_id": doc_id,
                     "chunk_index": row[3],
                     "filename": row[4],
                     "score": float(row[5])
                 })
+            
+            # Phase 4: Adaptive TTL - Update last accessed time for these documents
+            if retrieved_doc_ids:
+                from .database import Document
+                db.query(Document).filter(Document.id.in_(list(set(retrieved_doc_ids)))).update(
+                    {Document.last_accessed_at: text("now()")}, synchronize_session=False
+                )
+                db.commit()
+
             return hits
         except Exception as e:
             print(f"Retrieval Error: {e}")

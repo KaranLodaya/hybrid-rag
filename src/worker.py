@@ -179,3 +179,75 @@ def ingest_document(
         raise e
     finally:
         db.close()
+@celery_app.task(name="src.worker.adaptive_ttl_cleanup")
+def adaptive_ttl_cleanup():
+    """
+    Background janitor that cleans up expired or low-value documents 
+    to stay within storage limits.
+    """
+    if not settings.ttl_enabled:
+        return {"status": "disabled"}
+
+    db = SessionLocal()
+    try:
+        # 1. Strict TTL Cleanup
+        # Delete documents that have explicitly expired
+        expired_count = db.query(Document).filter(
+            Document.ttl_expiry != None,
+            Document.ttl_expiry < datetime.utcnow()
+        ).delete()
+        db.commit()
+
+        # 2. Capacity-based Strategic Pruning
+        # If we exceed the soft limit, we prune until we hit the safe limit
+        total_chunks = db.query(Chunk).count()
+        pruned_docs_count = 0
+        
+        if total_chunks > settings.chunk_soft_limit:
+            chunks_to_remove = total_chunks - settings.chunk_safe_limit
+            
+            # Strategy: Prune high volatility and oldest accessed documents first
+            # We delete whole documents (and their chunks) to maintain integrity
+            candidate_docs = (
+                db.query(Document)
+                .order_by(Document.volatility_score.desc(), Document.last_accessed_at.asc())
+                .all()
+            )
+            
+            removed_chunks_total = 0
+            for doc in candidate_docs:
+                if removed_chunks_total >= chunks_to_remove:
+                    break
+                
+                # Count how many chunks we are about to remove
+                doc_chunks_count = db.query(Chunk).filter(Chunk.document_id == doc.id).count()
+                
+                # Remove Chunks first (due to foreign key constraints if not CASCADE)
+                db.query(Chunk).filter(Chunk.document_id == doc.id).delete()
+                db.delete(doc)
+                
+                removed_chunks_total += doc_chunks_count
+                pruned_docs_count += 1
+            
+            db.commit()
+            print(f"[{datetime.now()}] Adaptive TTL Pruned {pruned_docs_count} docs ({removed_chunks_total} chunks)")
+            
+        return {
+            "status": "success", 
+            "expired_deleted": expired_count, 
+            "capacity_pruned_docs": pruned_docs_count
+        }
+    except Exception as e:
+        db.rollback()
+        print(f"Cleanup Error: {e}")
+        raise e
+    finally:
+        db.close()
+
+# Configure Periodic Tasks (Celery Beat)
+celery_app.conf.beat_schedule = {
+    "adaptive-ttl-cleanup-hourly": {
+        "task": "src.worker.adaptive_ttl_cleanup",
+        "schedule": 3600.0, # Every hour
+    },
+}

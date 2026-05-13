@@ -24,5 +24,7 @@ class Settings(BaseSettings):
     # Adaptive TTL
     ttl_enabled: bool = True
     base_ttl_days: int = 30
+    chunk_soft_limit: int = 50000
+    chunk_safe_limit: int = 40000
 
 settings = Settings()

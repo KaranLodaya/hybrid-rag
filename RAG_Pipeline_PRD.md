@@ -3,8 +3,8 @@
 
 ---
 
-> **Version:** 1.0 — Dual-Audience Architecture (Enterprise & Personal)
-> **Status:** Active Development (Phases 0, 1, 3 Complete)
+> **Version:** 1.2 — "Adaptive Memory" Edition
+> **Status:** Phase 0, 1, 2, 3, 4 Complete
 > **Author:** Solo Portfolio Project
 > **Last Updated:** May 2026
 > **Target Scale:** 1,000–100,000+ documents (Logical Workspace Isolation)
@@ -13,7 +13,7 @@
 > **LLM Strategy:** Model-agnostic · Multi-provider · Managed & Local models
 > **Queue:** Celery + Redis
 > **Observability:** Langfuse · OpenTelemetry · Cost Tracking · Eval Dashboard
-> **Total Phases:** 10 (Phase 0 → Phase 9)
+> **Total Phases:** 11 (Phase 0 → Phase 10)
 
 ---
 
@@ -30,15 +30,17 @@
 9. [Phase 1 — Document Ingestion and Chunking Pipeline](#9-phase-1--document-ingestion-and-chunking-pipeline)
 10. [Phase 2 — Hybrid Retrieval Engine](#10-phase-2--hybrid-retrieval-engine)
 11. [Phase 3 — Generation and Citation Layer](#11-phase-3--generation-and-citation-layer)
-12. [Phase 4 — Evaluation Framework](#12-phase-4--evaluation-framework)
-13. [Phase 5 — API and Dashboard](#13-phase-5--api-and-dashboard)
-14. [Phase 6 — Observability, Monitoring and Cost Tracking](#14-phase-6--observability-monitoring-and-cost-tracking)
-15. [Phase 7 — Security and Authentication](#15-phase-7--security-and-authentication)
-16. [Phase 8 — Deployment and DevOps](#16-phase-8--deployment-and-devops)
-17. [Edge Cases Master Reference](#17-edge-cases-master-reference)
-18. [Scalability Design](#18-scalability-design)
-19. [Risk Register](#19-risk-register)
-20. [Open Questions and Future Scope](#20-open-questions-and-future-scope)
+12. [Phase 4 — Adaptive TTL (Dynamic Memory)](#12-phase-4--adaptive-ttl-dynamic-memory) [COMPLETED]
+13. [Phase 5 — API, Dashboard, and Real-Time Experience](#13-phase-5--api-dashboard-and-real-time-experience)
+14. [Phase 6 — Evaluation Framework](#14-phase-6--evaluation-framework)
+15. [Phase 7 — Observability, Monitoring and Cost Tracking](#15-phase-7--observability-monitoring-and-cost-tracking)
+16. [Phase 8 — Security and Authentication](#16-phase-8--security-and-authentication)
+17. [Phase 9 — Deployment and DevOps](#17-phase-9--deployment-and-devops)
+18. [Phase 10 — Future Scope: Agentic Workflows](#18-phase-10--future-scope-agentic-workflows)
+19. [Edge Cases Master Reference](#19-edge-cases-master-reference)
+20. [Scalability Design](#20-scalability-design)
+21. [Risk Register](#21-risk-register)
+
 
 ## 1. Executive Summary
 
@@ -343,94 +345,169 @@ Connect the Hybrid Search output to an LLM (Gemini 1.5 Flash) using a configurab
 
 ---
 
-## 12. Phase 4 — Adaptive TTL (Dynamic Memory)
+## 12. Phase 4 — Adaptive TTL (Dynamic Memory) [COMPLETED]
+
+This component manages the document lifecycle to ensure the system remains within the constraints of the Render free tier (1GB DB limit) while prioritizing relevant data.
 
 #### 12.1 Volatility-Based Forgetting
-New component to manage document lifecycle based on usage and volatility.
-- **Volatility Scoring**: Documents are tagged with a `volatility_score` (e.g., "Legal" = 0.1, "News" = 0.9).
-- **TTL Calculation**: `Expiry = LastAccessed + (BaseTTL / Volatility)`.
-- **Cleanup Job**: Periodic Celery task removes chunks of expired documents.
+Documents are assigned a `volatility_score` upon ingestion, which determines their base lifespan.
+- **Scoring Logic**:
+    - **Low Volatility (0.1 - 0.3)**: Static documents like Legal Contracts, Personal Journals, or Core Documentation. Base TTL: 365 days.
+    - **Medium Volatility (0.4 - 0.6)**: Project notes, technical specs, or active research. Base TTL: 90 days.
+    - **High Volatility (0.7 - 1.0)**: News articles, temporary snippets, or social media exports. Base TTL: 14 days.
+- **Dynamic Expiry Formula**: 
+  `TTL_Expiry = Last_Accessed_At + (Base_TTL / Volatility_Score)`
+  *Every time a document is retrieved as part of a /ask query, its `Last_Accessed_At` is updated, effectively "refreshing" its memory.*
+
+#### 12.2 The "Never-Forget" Pin (User Override)
+- Users can manually "Pin" a document in the Dashboard.
+- Pinned documents have `volatility_score` set to `0.0` (effectively disabling TTL).
+
+#### 12.3 Automated Cleanup Architecture
+- **Worker**: Celery Beat scheduled task (`prune_expired_docs`).
+- **Frequency**: Every 24 hours at 03:00 UTC.
+- **Operation**:
+    1. Identify `Document` records where `ttl_expiry < NOW()`.
+    2. Batch delete associated `Chunks` from the unified PostgreSQL table (clearing both Vector and Sparse indices).
+    3. Remove the raw file from `Object Storage`.
+    4. Log the "forgetting" event in Langfuse for observability.
 
 ---
 
-## 13. Phase 5 — Evaluation & Polish
+## 13. Phase 5 — API, Dashboard, and Real-Time Experience
 
-- **Evaluation**: Implement LLM-as-a-judge for faithfulness and answer relevance.
-- **UX Polish**: Final refinements to the Next.js dashboard.
+This phase focuses on the user-facing interface and the seamless connection between the backend and frontend.
 
-## 13. Phase 5 — API and Dashboard
+#### 13.1 FastAPI Production Endpoints
+- **Streamed Response (`/v1/ask/stream`)**: Implementation of Server-Sent Events (SSE) to deliver LLM tokens to the UI as they are generated.
+- **Ingestion Status (`/v1/documents/{id}/status`)**: Long-polling endpoint for the UI to track the Load -> Split -> Embed pipeline.
 
-- Develop robust FastAPI endpoints (`/ask`, `/ingest`).
-- Build a responsive Next.js dashboard using TypeScript and Tailwind CSS for document management and querying.
-- Implement real-time streaming of LLM responses in the UI.
+#### 13.2 "Modern Monochrome" Dashboard (Next.js 14)
+- **The "Command Bar"**: A global search and workspace switcher inspired by Raycast/Linear.
+- **Glassmorphic Sidebar**: Workspace navigation with real-time storage usage meters (DB % full).
+- **Source-First Chat UI**:
+    - **Evidence Tooltips**: Hovering over a citation `[1]` triggers a mini-portal showing the exact chunk text without context switching.
+    - **Mode Switcher**: A prominent "Fortress vs. Genius" toggle in the header.
 
----
+#### 13.3 Interaction Polish
+- **Warming Up Pulse**: Since the Render free tier spins down after inactivity, the UI must show a "Warming Up" state while the first request wakes the container.
+- **Auto-Scrolling & Markdown**: High-fidelity rendering of LaTeX, code blocks, and markdown tables.
 
-## 14. Phase 6 — Observability, Monitoring and Cost Tracking
-
-- Integrate Langfuse for LLM traces and cost tracking per query.
-- Use OpenTelemetry for API latency and DB query performance.
-
----
-
-## 15. Phase 7 — Security and Authentication
-
-- **Logical Workspace Isolation**: Every database query is strictly filtered by `workspace_id` at the row level to isolate personal vs. enterprise data.
-- **Tiered Authentication**: Support API Keys (personal) and JWT/OAuth2 (enterprise integrations).
-- **Privacy-First "Personal Mode"**: Local execution using BGE models to ensure zero data exfiltration.
-- **Audit Logging**: Track data access and modifications for enterprise compliance.
 
 ---
 
-## 16. Phase 8 — Deployment and DevOps
+## 14. Phase 6 — Evaluation Framework
 
-- Containerize all backend services using Docker.
-- Deploy the Backend (FastAPI, Celery, Postgres) to Render.
-- Deploy the Frontend to Vercel with environment variables pointing to the Render API.
+To ensure the "Source-First" guarantee, we implement a rigorous evaluation pipeline using the **Ragas** framework combined with LLM-as-a-Judge.
+
+#### 14.1 The "Golden" Test Suite
+- A curated JSON dataset of `(Question, Context, Ground_Truth)` triplets.
+- Covers edge cases like:
+    - Ambiguous queries.
+    - Queries with no relevant documents (testing "Strict Mode" refusal).
+    - Multi-document reasoning.
+
+#### 14.2 Core Metrics (Automated)
+| Metric | Definition | Target |
+|---|---|---|
+| **Faithfulness** | Are the claims in the answer supported by the context? | > 0.90 |
+| **Answer Relevancy** | Does the answer actually address the user's prompt? | > 0.85 |
+| **Context Precision** | Are the most relevant chunks ranked at the top? | > 0.80 |
+| **Citation Recall** | Are all factual claims properly attributed to a source? | 1.00 |
+
+#### 14.3 Evaluation Workflow
+1.  **Synthetic Data Generation**: Use Gemini 1.5 Pro to generate 50 questions from the uploaded corpus.
+2.  **Batch Inference**: Run the RAG pipeline over the test set.
+3.  **Grading**: Use `Gemini 1.5 Pro` (Judge) to score the `Gemini 1.5 Flash` (Student) output.
 
 ---
 
-## 17. Edge Cases Master Reference
+## 15. Phase 7 — Observability, Monitoring and Cost Tracking
 
-### 17.1 Ingestion Edge Cases
+#### 15.1 LLM Tracing (Langfuse)
+- **Nested Spans**: Track timing for `Retrieval` -> `Reranking` -> `Generation`.
+- **Token Usage**: Granular tracking of Input vs. Output tokens per request.
+- **Cost Attribution**: Automatic calculation based on model-specific pricing.
 
-| # | Edge Case | Severity | Handling |
+#### 15.2 System Health
+- **Prometheus/Grafana**: Monitor API response times (P99) and Celery task latency.
+- **Vector DB Health**: Track `pgvector` HNSW index hit rates and disk usage.
+
+---
+
+## 16. Phase 8 — Security and Authentication
+
+#### 16.1 Workspace Quotas (Free-Tier Protection)
+To ensure system stability on the Render free tier, we implement strict resource limits per workspace:
+- **Document Limit**: Max 50 documents per personal vault.
+- **Storage Limit**: Max 100MB of raw text data per workspace.
+- **Enforcement**: The `/v1/ingest` endpoint must perform a pre-flight count check and return a `403 Forbidden` if quotas are exceeded.
+
+#### 16.2 Logical Workspace Isolation & Invitations
+- **RLS (Row Level Security)**: Every database query is strictly filtered by `workspace_id`.
+- **Member Management**:
+    - **Ownership**: The `owner_id` of a workspace has full `ADMIN` rights.
+    - **Invitations**: Implement a `workspace_access` table allowing owners to share their vault with other user IDs (Read-only vs. Read-Write).
+- **Authentication**: JWT-based auth via Clerk or Auth0 with per-user workspace ownership.
+
+#### 16.3 Privacy & Data Governance (Hard-Delete)
+- **Hard-Delete Policy**: Deleting a document ([src/main.py:L204](file:///Users/karan/Documents/GitHub/hybrid-rag/src/main.py#L204)) triggers an immediate purge of associated vector chunks.
+- **Filesystem Cleanup**: The raw file in the `uploads/` directory must be unlinked (`os.remove`) upon document deletion.
+- **Strict Grounding**: System prompt constraints to prevent training-data leakage.
+
+
+---
+
+## 17. Phase 9 — Deployment and DevOps
+
+- **CI/CD Pipeline**: GitHub Actions for automated linting, testing, and deployment.
+- **Blue/Green Ingestion**: Ability to re-index documents without downtime.
+- **Infrastructure as Code**: Terraform/Pulumi scripts for reproducible cloud environments.
+
+---
+
+## 18. Phase 10 — Future Scope: Agentic Workflows
+
+- **Agentic Routing**: Dynamically deciding whether a question needs search, calculation, or a direct answer.
+- **Multi-Hop Retrieval**: Automatically generating sub-questions for complex queries.
+- **Interactive Source Editing**: Allowing users to correct the AI's "memory" in real-time.
+
+## 19. Edge Cases Master Reference
+
+For a complete list of all 50+ failure modes (I-Series, R-Series, U-Series, etc.), see the comprehensive [**Edge Case Catalogue**](file:///Users/karan/Documents/GitHub/hybrid-rag/docs/EDGE_CASES.md).
+
+### 19.1 High-Severity Reference (Critical Path)
+
+| ID | Case | Impact | Handling |
 |---|---|---|---|
-| I-09 | **Postgres Sparse Index Delay** | Low | pg_search index updates are transactional. If delay occurs, it's handled by DB-level WAL. |
-| I-15 | **Cross-Model Embedding Mismatch** | High | Ensure `EMBEDDING_PROVIDER` is consistent across ingestion and query, OR implement a transformation layer if using the two-layer experimental mode. |
-
-### 17.2 Retrieval Edge Cases
-
-| # | Edge Case | Severity | Handling |
-|---|---|---|---|
-| R-10 | **pgvector Performance Spike** | Medium | Use HNSW index for `pgvector` when chunk count > 5,000. |
+| **I-11** | **Rate Limit Triggered** | High | Exponential backoff for API calls. |
+| **I-14** | **Workspace Breach** | Critical | Mandatory `workspace_id` filter in every SQL query. |
+| **R-04** | **Context Window Overflow** | High | Rank-aware truncation to fit model limits. |
+| **R-06** | **Citation Hallucination** | High | Post-processing: verify every `[N]` exists in retrieval list. |
+| **H-01** | **Database Disk Full** | Critical | **Adaptive TTL Engine** aggressive pruning. |
 
 ---
 
-## 18. Scalability Design
+## 20. Scalability Design
 
-- **Vector Search Optimization**: Transition from exact search to HNSW index for `>5,000` chunks.
-- **Horizontal Scaling**: Scale Celery workers horizontally for high-throughput ingestion.
-- **Database Reads**: Implement read replicas for PostgreSQL if retrieval load increases.
+- **Vector Search Optimization**: HNSW indexing for high-volume workspaces.
+- **Horizontal Scaling**: Scale Celery workers for ingestion bursts.
+- **Database Reads**: Read replicas for PostgreSQL in enterprise setups.
+- **Cache Layer**: Redis caching for common query-embedding pairs.
 
 ---
 
-## 19. Risk Register
+## 21. Risk Register
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| Embedding model cost increase | Medium | High | **Two-layer strategy**: Switch query-time Gemini to local BGE if budget is exceeded. |
-| Database Bloat (Postgres) | Medium | Medium | **Adaptive TTL Engine** automatically prunes stale/volatile documents. |
-| Vector Index Latency | Low | Medium | pgvector HNSW indexing and Postgres query optimization. |
-
----
-
-## 20. Open Questions and Future Scope
-
-- **Multi-language Support**: Should we implement cross-lingual embeddings for global enterprise users?
-- **Agentic Workflows**: Can we introduce agentic routing to handle complex, multi-step reasoning questions?
-- **Granular RBAC**: Implement fine-grained Role-Based Access Control per document.
+| Embedding cost increase | Medium | High | **Two-layer strategy**: Fallback to local BGE. |
+| Database Bloat | Medium | Medium | **Adaptive TTL Engine** aggressive pruning. |
+| Vector Index Latency | Low | Medium | pgvector HNSW indexing and optimization. |
+| Model Downtime | Low | High | Fallback to Hugging Face Inference API. |
 
 ---
 
 *End of Document — RAG Pipeline PRD 1.0*
+
+
