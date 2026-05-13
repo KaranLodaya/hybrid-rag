@@ -1112,7 +1112,7 @@ export default function HybridRAGDashboard() {
               
               <footer className="p-6 border-t border-[var(--border)] bg-[var(--secondary)]/30">
                 <div className="flex items-center justify-between text-[11px] font-bold opacity-60">
-                  <span>Type: {viewingDoc.format.toUpperCase()}</span>
+                  <span>Type: {viewingDoc.format?.toUpperCase() || "UNKNOWN"}</span>
                   <span>ID: {viewingDoc.id.slice(0, 8)}...</span>
                 </div>
               </footer>
