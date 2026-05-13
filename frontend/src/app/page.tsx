@@ -69,7 +69,7 @@ const Citation = ({
   index: number, 
   source: any, 
   onMouseEnter: (e: React.MouseEvent, source: any) => void,
-  onClick: (id: string, filename: string, format: string, chunk?: number, metadata?: any) => void
+  onClick: (id: string, filename: string, format: string, chunk?: number, metadata?: any, text?: string) => void
 }) => (
   <span 
     onMouseEnter={(e) => onMouseEnter(e, source)}
@@ -79,7 +79,7 @@ const Citation = ({
       if (isWeb) {
         window.open(source.url, '_blank', 'noopener,noreferrer');
       } else {
-        onClick(source.document_id, source.filename, source.format, source.chunk_index, source.metadata);
+        onClick(source.document_id, source.filename, source.format, source.chunk_index, source.metadata, source.text);
       }
     }}
     className="citation-circle"
@@ -135,7 +135,7 @@ const ChatMessage = React.memo(({
 }: { 
   msg: Message, 
   onCitationHover: (e: React.MouseEvent, source: any) => void,
-  onSourceClick: (id: string, filename: string, format: string, chunk?: number, metadata?: any) => void
+  onSourceClick: (id: string, filename: string, format: string, chunk?: number, metadata?: any, text?: string) => void
 }) => {
   return (
     <div className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-slide-up`}>
@@ -235,7 +235,7 @@ export default function HybridRAGDashboard() {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   
   // Document Viewer State
-  const [viewingDoc, setViewingDoc] = useState<{ id: string; filename: string; format: string; chunk?: number; page?: number } | null>(null);
+  const [viewingDoc, setViewingDoc] = useState<{ id: string; filename: string; format: string; chunk?: number; page?: number; searchSnippet?: string } | null>(null);
 
   // Drafts state for per-workspace input persistence
 
@@ -278,9 +278,11 @@ export default function HybridRAGDashboard() {
     setActiveCitation(source);
   }, []);
 
-  const handleOpenViewer = (id: string, filename: string, format: string, chunk?: number, metadata?: any) => {
+  const handleOpenViewer = (id: string, filename: string, format: string, chunk?: number, metadata?: any, text?: string) => {
     const pageNum = metadata?.page_number || metadata?.page || 1;
-    setViewingDoc({ id, filename, format, chunk, page: pageNum });
+    // Extract a clean 4-5 word snippet for the browser's native PDF search
+    const searchSnippet = text ? text.split(' ').slice(0, 6).join(' ').replace(/[^\w\s]/g, '') : '';
+    setViewingDoc({ id, filename, format, chunk, page: pageNum, searchSnippet });
   };
 
 
@@ -1038,7 +1040,7 @@ export default function HybridRAGDashboard() {
               if (isWeb) {
                 window.open(activeCitation.url, '_blank', 'noopener,noreferrer');
               } else {
-                handleOpenViewer(activeCitation.document_id, activeCitation.filename, activeCitation.format, activeCitation.chunk_index, activeCitation.metadata);
+                handleOpenViewer(activeCitation.document_id, activeCitation.filename, activeCitation.format, activeCitation.chunk_index, activeCitation.metadata, activeCitation.text);
               }
             }}
             style={{
@@ -1105,7 +1107,7 @@ export default function HybridRAGDashboard() {
               
               <div className="flex-1 bg-black/5 relative">
                 <iframe 
-                  src={`http://localhost:8000/v1/documents/${viewingDoc.id}/view#page=${viewingDoc.page || 1}`}
+                  src={`http://localhost:8000/v1/documents/${viewingDoc.id}/view#page=${viewingDoc.page || 1}${viewingDoc.searchSnippet ? `&search=${encodeURIComponent(viewingDoc.searchSnippet)}` : ''}`}
                   className="w-full h-full border-none"
                   title="Source Document"
                 />
