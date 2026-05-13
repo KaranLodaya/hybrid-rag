@@ -54,6 +54,7 @@ class Chunk(Base):
     strategy: Mapped[str] = mapped_column(String)
     token_count: Mapped[int] = mapped_column(Integer)
     is_duplicate: Mapped[bool] = mapped_column(Boolean, default=False)
+    chunk_metadata: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     
     document = relationship("Document", back_populates="chunks")
@@ -66,5 +67,6 @@ def init_db():
     # Create the search_vector column manually as a generated tsvector
     with engine.connect() as conn:
         conn.execute(text("ALTER TABLE chunks ADD COLUMN IF NOT EXISTS search_vector tsvector GENERATED ALWAYS AS (to_tsvector('english', coalesce(text, ''))) STORED;"))
+        conn.execute(text("ALTER TABLE chunks ADD COLUMN IF NOT EXISTS chunk_metadata JSON DEFAULT '{}';"))
         conn.execute(text("CREATE INDEX IF NOT EXISTS chunks_search_idx ON chunks USING GIN (search_vector);"))
         conn.commit()

@@ -117,17 +117,18 @@ def ingest_document(
         
         # 3. Save Chunks
         db_start = perf_counter()
-        for i, (text, embedding) in enumerate(zip(texts, embeddings)):
+        for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
             new_chunk = Chunk(
                 id=uuid.uuid4(),
                 workspace_id=uuid.UUID(workspace_id),
                 document_id=uuid.UUID(document_id),
                 chunk_index=i,
-                text=text,
+                text=chunk.page_content,
                 embedding=embedding,
                 embedding_model=model_name,
                 strategy="recursive",
-                token_count=len(text.split())
+                token_count=len(chunk.page_content.split()),
+                chunk_metadata=chunk.metadata
             )
             db.add(new_chunk)
         

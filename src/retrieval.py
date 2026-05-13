@@ -89,13 +89,13 @@ class HybridRetriever:
         # 4. Assemble Final Query
         sql_query = f"""
         WITH {', '.join(ctes)}
-        SELECT c.id, c.text, c.document_id, c.chunk_index, d.filename, SUM(combined.rrf_score) as total_score
+        SELECT c.id, c.text, c.document_id, c.chunk_index, d.filename, c.chunk_metadata, SUM(combined.rrf_score) as total_score
         FROM (
             {' UNION ALL '.join(unions)}
         ) combined
         JOIN chunks c ON c.id = combined.id
         JOIN documents d ON d.id = c.document_id
-        GROUP BY c.id, c.text, c.document_id, c.chunk_index, d.filename
+        GROUP BY c.id, c.text, c.document_id, c.chunk_index, d.filename, c.chunk_metadata
         ORDER BY total_score DESC
         LIMIT :limit;
         """
@@ -114,7 +114,8 @@ class HybridRetriever:
                     "document_id": doc_id,
                     "chunk_index": row[3],
                     "filename": row[4],
-                    "score": float(row[5])
+                    "metadata": row[5],
+                    "score": float(row[6])
                 })
             
             # Phase 4: Adaptive TTL - Update last accessed time for these documents

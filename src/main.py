@@ -123,6 +123,26 @@ async def ingest_file(
     finally:
         db.close()
 
+from fastapi.responses import FileResponse
+
+@app.get("/v1/documents/{document_id}/view")
+def view_document(document_id: str):
+    db = SessionLocal()
+    try:
+        doc = db.query(Document).filter(Document.id == uuid.UUID(document_id)).first()
+        if not doc:
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        file_path = os.path.join(UPLOAD_DIR, f"{document_id}.{doc.format}")
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="File not found on disk")
+            
+        media_type = "application/pdf" if doc.format.lower() == "pdf" else "text/plain"
+        return FileResponse(file_path, media_type=media_type)
+    finally:
+        db.close()
+
+
 @app.post("/v1/ask")
 def ask_question(workspace_id: str, query: str, mode: str = "strict", limit: int = 5):
     from .retrieval import retriever
@@ -133,15 +153,19 @@ def ask_question(workspace_id: str, query: str, mode: str = "strict", limit: int
         results = retriever.search(workspace_id=workspace_id, query=query, limit=limit)
         
         # 2. Generate answer based on Mode (Strict or Hybrid)
-        answer = generator.generate_answer(query, results, mode=mode)
+        gen_data = generator.generate_answer(query, results, mode=mode)
+        
+        # Merge local document results with real-time web results
+        all_sources = results + gen_data.get("web_sources", [])
         
         return {
             "query": query,
             "workspace_id": workspace_id,
             "mode": mode,
-            "answer": answer,
-            "results": results
+            "answer": gen_data["answer"],
+            "results": all_sources
         }
+
             
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
