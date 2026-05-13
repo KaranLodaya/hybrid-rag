@@ -38,6 +38,9 @@ class HybridRetriever:
         """
         db = SessionLocal()
         
+        # Phase 5: Intent Detection - Check if this is a summary request
+        is_summary_request = any(keyword in query.lower() for keyword in ["summarize", "summarise", "summary", "overview"])
+        
         # 1. Get embeddings
         gemini_vec, bge_vec = self.get_query_embeddings(query)
         
@@ -86,7 +89,19 @@ class HybridRetriever:
         )""")
         unions.append("SELECT * FROM sparse_hits")
 
-        # 4. Assemble Final Query
+        # 4. Summary Intent Layer
+        if is_summary_request:
+            ctes.append("""
+            summary_hits AS (
+                SELECT id, 1.0 / (chunk_index + 1 + :k) as rrf_score
+                FROM chunks
+                WHERE workspace_id = CAST(:workspace_id AS UUID)
+                AND chunk_index < 5
+                LIMIT 20
+            )""")
+            unions.append("SELECT * FROM summary_hits")
+
+        # 5. Assemble Final Query
         sql_query = f"""
         WITH {', '.join(ctes)}
         SELECT c.id, c.text, c.document_id, c.chunk_index, d.filename, c.chunk_metadata, SUM(combined.rrf_score) as total_score
