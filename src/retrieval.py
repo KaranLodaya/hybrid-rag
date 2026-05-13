@@ -38,8 +38,9 @@ class HybridRetriever:
         """
         db = SessionLocal()
         
-        # Phase 5: Intent Detection - Check if this is a summary request
-        is_summary_request = any(keyword in query.lower() for keyword in ["summarize", "summarise", "summary", "overview"])
+        # Phase 5: Intent Detection - Check if this is a general/summary request
+        summary_keywords = ["summarize", "summarise", "summary", "overview", "what is this", "what is it", "about", "tell me about"]
+        is_summary_request = any(keyword in query.lower() for keyword in summary_keywords)
         
         # 1. Get embeddings
         gemini_vec, bge_vec = self.get_query_embeddings(query)
