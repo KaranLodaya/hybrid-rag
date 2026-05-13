@@ -3,7 +3,7 @@
 
 ---
 
-> **Version:** 1.2 — "Adaptive Memory" Edition
+> **Version:** 1.3 — "Precision Discovery" Edition
 > **Status:** Phase 0, 1, 2, 3, 4 Complete
 > **Author:** Solo Portfolio Project
 > **Last Updated:** May 2026
@@ -31,7 +31,7 @@
 10. [Phase 2 — Hybrid Retrieval Engine](#10-phase-2--hybrid-retrieval-engine)
 11. [Phase 3 — Generation and Citation Layer](#11-phase-3--generation-and-citation-layer)
 12. [Phase 4 — Adaptive TTL (Dynamic Memory)](#12-phase-4--adaptive-ttl-dynamic-memory) [COMPLETED]
-13. [Phase 5 — API, Dashboard, and Real-Time Experience](#13-phase-5--api-dashboard-and-real-time-experience)
+13. [Phase 5 — High-Precision Re-ranking & Real-Time Dashboard](#13-phase-5--high-precision-re-ranking--real-time-dashboard)
 14. [Phase 6 — Evaluation Framework](#14-phase-6--evaluation-framework)
 15. [Phase 7 — Observability, Monitoring and Cost Tracking](#15-phase-7--observability-monitoring-and-cost-tracking)
 16. [Phase 8 — Security and Authentication](#16-phase-8--security-and-authentication)
@@ -374,12 +374,14 @@ Documents are assigned a `volatility_score` upon ingestion, which determines the
 
 ---
 
-## 13. Phase 5 — API, Dashboard, and Real-Time Experience
+## 13. Phase 5 — High-Precision Re-ranking & Real-Time Dashboard
 
-This phase focuses on the user-facing interface and the seamless connection between the backend and frontend.
+Transition from a functional prototype to a high-precision discovery engine.
 
-#### 13.1 FastAPI Production Endpoints
-- **Streamed Response (`/v1/ask/stream`)**: Implementation of Server-Sent Events (SSE) to deliver LLM tokens to the UI as they are generated.
+### Tasks
+- [ ] **Implement Second-Stage Re-ranking**: Integrate a Cross-Encoder (Cohere or BGE-Reranker) to refine the top-20 RRF results.
+- [ ] **Real-Time Ingestion Feedback**: Finalize the dashboard's ability to show live progress of document splitting and embedding.
+- [ ] **Source-to-Answer Deep Links**: Enhance the hover-evidence system to allow users to click directly into the source document.
 - **Ingestion Status (`/v1/documents/{id}/status`)**: Long-polling endpoint for the UI to track the Load -> Split -> Embed pipeline.
 
 #### 13.2 "Modern Monochrome" Dashboard (Next.js 14)
