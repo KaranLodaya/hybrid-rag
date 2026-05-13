@@ -349,35 +349,35 @@ export default function HybridRAGDashboard() {
   }, [messages]);
 
   // Load workspaces on mount with health check
-  useEffect(() => {
-    const loadWorkspaces = async () => {
-      setIsBackendLoading(true);
-      try {
-        // Try to fetch with a timeout
-        const controller = new AbortController();
-        const id = setTimeout(() => controller.abort(), 8000);
+  // Load workspaces on mount with health check
+  const loadWorkspaces = async (showLoading = false) => {
+    if (showLoading) setIsBackendLoading(true);
+    
+    try {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), 8000);
 
-        const res = await fetch("http://localhost:8000/v1/workspaces", { signal: controller.signal });
-        clearTimeout(id);
+      const res = await fetch("http://localhost:8000/v1/workspaces", { signal: controller.signal });
+      clearTimeout(id);
 
-        if (!res.ok) throw new Error("Failed to fetch workspaces");
-        const data = await res.json();
-        setWorkspaces(data);
-        if (data.length > 0 && !activeWorkspace) {
-          setActiveWorkspace(data[0].id);
-        }
-        setApiError(null);
-        setIsBackendLoading(false);
-      } catch (err) {
-        console.error("API Connection Error:", err);
-        // If it's a timeout or connection refused, it might be spinning up
-        setApiError("Backend API is offline or warming up.");
-        // We keep isBackendLoading true if we want to keep showing the animation, 
-        // but let's allow it to show the error after a few retries.
-        setTimeout(loadWorkspaces, 5000); // Retry every 5s
+      if (!res.ok) throw new Error("Failed to fetch workspaces");
+      const data = await res.json();
+      setWorkspaces(data);
+      if (data.length > 0 && !activeWorkspace) {
+        setActiveWorkspace(data[0].id);
       }
-    };
-    loadWorkspaces();
+      setApiError(null);
+      setIsBackendLoading(false);
+    } catch (err) {
+      console.error("API Connection Error:", err);
+      setApiError("Backend API is offline or warming up.");
+      // We keep the error screen visible, but auto-retry silently in the background
+      setTimeout(() => loadWorkspaces(false), 10000); 
+    }
+  };
+
+  useEffect(() => {
+    loadWorkspaces(true); // Show loading only on initial mount
   }, []);
 
   useEffect(() => {
@@ -710,7 +710,7 @@ export default function HybridRAGDashboard() {
             {apiError}
           </p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={() => loadWorkspaces(true)}
             className="px-8 py-3 rounded-2xl bg-white text-black font-black uppercase tracking-widest text-[10px] hover:scale-105 transition-all active:scale-95 shadow-2xl shadow-white/10"
           >
             Retry Connection
